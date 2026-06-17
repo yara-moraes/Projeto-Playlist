@@ -10,25 +10,168 @@ struct Musica
     char categoria[50];
 };
 
-// Função auxiliar para remover a quebra de linha do fgets
 void limpaString(char string[])
 {
     size_t tam = strlen(string);
+
     if (tam > 0 && string[tam - 1] == '\n')
-    {
         string[tam - 1] = '\0';
+}
+
+void salvarPlaylist(struct Musica playlist[], int tamanho)
+{
+    FILE *arquivo = fopen("playlist.json", "w");
+
+    if (arquivo == NULL)
+    {
+        printf("Erro ao criar arquivo!\n");
+        return;
     }
+
+    fprintf(arquivo, "[\n");
+
+    for (int i = 0; i < tamanho; i++)
+    {
+        fprintf(
+            arquivo,
+            "  {\"nome\":\"%s\",\"compositor\":\"%s\",\"categoria\":\"%s\"}",
+            playlist[i].nome,
+            playlist[i].compositor,
+            playlist[i].categoria);
+
+        if (i < tamanho - 1)
+            fprintf(arquivo, ",");
+
+        fprintf(arquivo, "\n");
+    }
+
+    fprintf(arquivo, "]");
+    fclose(arquivo);
+}
+
+int carregarPlaylist(struct Musica playlist[])
+{
+    FILE *arquivo = fopen("playlist.json", "r");
+
+    if (arquivo == NULL)
+    {
+        arquivo = fopen("playlist.json", "w");
+
+        if (arquivo != NULL)
+        {
+            fprintf(arquivo, "[]");
+            fclose(arquivo);
+        }
+
+        return 0;
+    }
+
+    int i = 0;
+    char c;
+
+    fscanf(arquivo, " %c", &c);
+
+    while (i < MAX_MUSICAS)
+    {
+        int lidos = fscanf(
+            arquivo,
+            " {\"nome\":\"%49[^\"]\",\"compositor\":\"%49[^\"]\",\"categoria\":\"%49[^\"]\"}",
+            playlist[i].nome,
+            playlist[i].compositor,
+            playlist[i].categoria);
+
+        if (lidos != 3)
+            break;
+
+        i++;
+
+        fscanf(arquivo, " %c", &c);
+
+        if (c == ']')
+            break;
+    }
+
+    fclose(arquivo);
+    return i;
+}
+
+void listarMusicas(struct Musica playlist[], int tamanho)
+{
+    if (tamanho == 0)
+    {
+        printf("\nNenhuma musica cadastrada.\n");
+        return;
+    }
+
+    printf("\n=== PLAYLIST COMPLETA ===\n");
+
+    for (int i = 0; i < tamanho; i++)
+    {
+        printf("\nMusica %d\n", i + 1);
+        printf("Nome: %s\n", playlist[i].nome);
+        printf("Compositor: %s\n", playlist[i].compositor);
+        printf("Categoria: %s\n", playlist[i].categoria);
+    }
+}
+
+void deletarMusica(struct Musica playlist[], int *tamanho)
+{
+    if (*tamanho == 0)
+    {
+        printf("\nNenhuma musica cadastrada.\n");
+        return;
+    }
+
+    listarMusicas(playlist, *tamanho);
+
+    int indice;
+    printf("\nDigite o numero da musica que deseja deletar: ");
+    scanf("%d", &indice);
+    getchar();
+
+    indice--;
+
+    if (indice < 0 || indice >= *tamanho)
+    {
+        printf("\nMusica invalida!\n");
+        return;
+    }
+
+    for (int i = indice; i < *tamanho - 1; i++)
+    {
+        playlist[i] = playlist[i + 1];
+    }
+
+    (*tamanho)--;
+
+    salvarPlaylist(playlist, *tamanho);
+
+    printf("\nMusica removida com sucesso!\n");
 }
 
 int main()
 {
-    struct Musica playlist[MAX_MUSICAS] = {
-        {"Se hoje me toca", "José Jr", "Gospel"},
-        {"Chove chuva", "Jorge Ben Jor", "MPB"},
-        {"No secreto", "Luma Elpídio", "Gospel"},
-    };
+    struct Musica playlist[MAX_MUSICAS];
+    int tamanho = carregarPlaylist(playlist);
 
-    int tamanho = 3;
+    if (tamanho == 0)
+    {
+        strcpy(playlist[0].nome, "Se hoje me toca");
+        strcpy(playlist[0].compositor, "Jose Jr");
+        strcpy(playlist[0].categoria, "Gospel");
+
+        strcpy(playlist[1].nome, "Chove chuva");
+        strcpy(playlist[1].compositor, "Jorge Ben Jor");
+        strcpy(playlist[1].categoria, "MPB");
+
+        strcpy(playlist[2].nome, "No secreto");
+        strcpy(playlist[2].compositor, "Luma Elpidio");
+        strcpy(playlist[2].categoria, "Gospel");
+
+        tamanho = 3;
+        salvarPlaylist(playlist, tamanho);
+    }
+
     int opcao;
     int atual = 0;
     int tocando = 1;
@@ -38,10 +181,12 @@ int main()
         printf("\n=== SISTEMA DE MUSICAS ===\n");
         printf("1 - Cadastrar musica\n");
         printf("2 - Iniciar playlist\n");
+        printf("3 - Ver playlist completa\n");
+        printf("4 - Deletar musica\n");
         printf("0 - Sair\n\n");
         printf("Escolha uma opcao: ");
         scanf("%d", &opcao);
-        getchar(); // consome o Enter
+        getchar();
 
         switch (opcao)
         {
@@ -61,6 +206,8 @@ int main()
                 limpaString(playlist[tamanho].categoria);
 
                 tamanho++;
+                salvarPlaylist(playlist, tamanho);
+
                 printf("\nMusica cadastrada com sucesso!\n");
             }
             else
@@ -72,26 +219,28 @@ int main()
         case 2:
             if (tamanho == 0)
             {
-                printf("\nNenhuma musica cadastrada para iniciar.\n");
+                printf("\nNenhuma musica cadastrada.\n");
             }
             else
             {
                 int opcao_player;
+                atual = 0;
+
                 do
                 {
                     printf("\n=== PLAYER DE MUSICA ===\n");
-                    printf("Status: %s\n", tocando ? "▶️ TOCANDO" : "⏸️ PAUSADO");
+                    printf("Status: %s\n", tocando ? "TOCANDO" : "PAUSADO");
                     printf("Musica Atual: %s (%s) - %s\n",
                            playlist[atual].nome,
                            playlist[atual].categoria,
                            playlist[atual].compositor);
 
-                    printf("\n=== CASO QUEIRA, TECLE: ===\n");
-                    printf("1 - (Des)Pausar musica\n");
+                    printf("\n1 - (Des)Pausar musica\n");
                     printf("2 - Pular musica\n");
                     printf("3 - Voltar musica\n");
-                    printf("0 - Voltar ao menu inicial\n\n");
-                    printf("Escolha uma opcao: ");
+                    printf("0 - Voltar\n\n");
+                    printf("Escolha: ");
+
                     scanf("%d", &opcao_player);
                     getchar();
 
@@ -100,40 +249,36 @@ int main()
                     case 1:
                         tocando = !tocando;
                         break;
+
                     case 2:
                         if (atual < tamanho - 1)
-                        {
                             atual++;
-                            tocando = 1;
-                        }
                         else
-                        {
-                            printf("\nVoce ja esta na ultima musica da playlist!\n");
-                        }
+                            printf("Ultima musica!\n");
                         break;
+
                     case 3:
                         if (atual > 0)
-                        {
                             atual--;
-                            tocando = 1;
-                        }
                         else
-                        {
-                            printf("\nVoce ja esta na primeira musica da playlist!\n");
-                        }
+                            printf("Primeira musica!\n");
                         break;
-                    case 0:
-                        printf("\nVoltando ao menu inicial...\n");
-                        break;
-                    default:
-                        printf("\nOpcao invalida!\n");
                     }
+
                 } while (opcao_player != 0);
             }
             break;
 
+        case 3:
+            listarMusicas(playlist, tamanho);
+            break;
+
+        case 4:
+            deletarMusica(playlist, &tamanho);
+            break;
+
         case 0:
-            printf("\nEncerrando o sistema...\n");
+            printf("\nEncerrando...\n");
             break;
 
         default:
