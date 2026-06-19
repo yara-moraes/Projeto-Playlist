@@ -16,6 +16,7 @@ void limpaString(char string[])
 
     if (tam > 0 && string[tam - 1] == '\n')
         string[tam - 1] = '\0';
+    
 }
 
 void salvarPlaylist(struct Musica playlist[], int tamanho)
@@ -171,6 +172,47 @@ int main()
         tamanho = 3;
         salvarPlaylist(playlist, tamanho);
     }
+    
+    void editarMusica(struct Musica playlist[], int tamanho)
+{
+    if (tamanho == 0)
+    {
+        printf("\nNenhuma musica cadastrada.\n");
+        return;
+    }
+
+    listarMusicas(playlist, tamanho);
+
+    int indice;
+
+    printf("\nDigite o numero da musica que deseja editar: ");
+    scanf("%d", &indice);
+    getchar();
+
+    indice--;
+
+    if (indice < 0 || indice >= tamanho)
+    {
+        printf("\nMusica invalida!\n");
+        return;
+    }
+
+    printf("\nNovo nome: ");
+    fgets(playlist[indice].nome, 50, stdin);
+    limpaString(playlist[indice].nome);
+
+    printf("Novo compositor: ");
+    fgets(playlist[indice].compositor, 50, stdin);
+    limpaString(playlist[indice].compositor);
+
+    printf("Nova categoria: ");
+    fgets(playlist[indice].categoria, 50, stdin);
+    limpaString(playlist[indice].categoria);
+
+    salvarPlaylist(playlist, tamanho);
+
+    printf("\nMusica editada com sucesso!\n");
+}
 
     int opcao;
     int atual = 0;
@@ -183,6 +225,7 @@ int main()
         printf("2 - Iniciar playlist\n");
         printf("3 - Ver playlist completa\n");
         printf("4 - Deletar musica\n");
+        printf("5 - Editar musica\n");
         printf("0 - Sair\n\n");
         printf("Escolha uma opcao: ");
         scanf("%d", &opcao);
@@ -276,7 +319,11 @@ int main()
         case 4:
             deletarMusica(playlist, &tamanho);
             break;
-
+            
+        case 5:
+            editarMusica(playlist, tamanho);
+            break;
+    
         case 0:
             printf("\nEncerrando...\n");
             break;
